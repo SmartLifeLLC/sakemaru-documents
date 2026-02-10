@@ -69,6 +69,7 @@
 - Stage 4 の apply は段階導入として `partners(is_supplier=0)` と `buyer_invoices` まで実装済み。
 - `buyers` は target 側に対応テーブルがないため同期対象外（契約・監査対象として継続管理）。
 - `doc_sync_checkpoints` を使った継続実行を実装済み（`--from_start` で先頭再実行可能）。
+- S8 停止制御を反映済み（retryable自動再試行最大3回 / run内 error率閾値超過で停止）。
 - 運用コマンド: `sync:partner-portal:checkpoint-show`, `sync:partner-portal:checkpoint-reset`。
 - Admin運用UI: `/admin/sync-runs`, `/admin/sync-run-items`, `/admin/sync-errors`, `/admin/sync-checkpoints`, `/admin/sync-mappings`。
 - 同期サービス検証テストを追加済み: `tests/Feature/Sync/*`（apply/invoice apply/gate）。

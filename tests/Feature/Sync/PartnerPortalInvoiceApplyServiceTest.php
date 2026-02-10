@@ -128,4 +128,130 @@ class PartnerPortalInvoiceApplyServiceTest extends TestCase
         $this->assertSame(0, $third['scanned_count']);
         $this->assertSame(0, $third['error_count']);
     }
+
+    public function test_invoice_apply_stops_when_error_rate_exceeds_threshold(): void
+    {
+        config([
+            'sync.partner_portal.apply.error_rate_stop' => 0.05,
+            'sync.partner_portal.apply.max_retries' => 3,
+        ]);
+
+        DB::connection('sakemaru')->table('clients')->insert([
+            'id' => 1,
+            'code' => 'C001',
+            'name' => 'Client 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::connection('sakemaru')->table('partners')->insert([
+            'id' => 301,
+            'client_id' => 1,
+            'name' => 'Partner B',
+            'is_supplier' => 0,
+            'is_active' => 1,
+            'updated_at' => '2026-02-10 10:00:00',
+        ]);
+
+        DB::connection('sakemaru')->table('buyer_invoices')->insert([
+            [
+                'id' => 401,
+                'uuid' => '',
+                'client_id' => 1,
+                'partner_id' => 301,
+                'closing_bill_id' => 11,
+                'closing_balance_overview_id' => 21,
+                'closing_balance_price_id' => 31,
+                'closing_date' => '2026-01-31',
+                's3_bucket' => 'bucket',
+                's3_path' => 'path/invalid.pdf',
+                'file_name' => 'invalid.pdf',
+                'file_size' => 1,
+                'file_hash' => null,
+                'page_count' => null,
+                'partner_code' => 'P301',
+                'partner_name' => 'Partner B',
+                'invoice_number' => 'INV-BAD',
+                'billing_amount' => 100,
+                'metadata' => null,
+                'status' => 'published',
+                'print_type' => 'pdf',
+                'creator_id' => 1,
+                'is_active' => 1,
+                'created_at' => '2026-02-10 10:00:00',
+                'updated_at' => '2026-02-10 10:00:00',
+            ],
+            [
+                'id' => 402,
+                'uuid' => 'uuid-should-not-run',
+                'client_id' => 1,
+                'partner_id' => 301,
+                'closing_bill_id' => 12,
+                'closing_balance_overview_id' => 22,
+                'closing_balance_price_id' => 32,
+                'closing_date' => '2026-01-31',
+                's3_bucket' => 'bucket',
+                's3_path' => 'path/skip.pdf',
+                'file_name' => 'skip.pdf',
+                'file_size' => 2,
+                'file_hash' => null,
+                'page_count' => null,
+                'partner_code' => 'P301',
+                'partner_name' => 'Partner B',
+                'invoice_number' => 'INV-SKIP',
+                'billing_amount' => 200,
+                'metadata' => null,
+                'status' => 'published',
+                'print_type' => 'pdf',
+                'creator_id' => 1,
+                'is_active' => 1,
+                'created_at' => '2026-02-10 10:01:00',
+                'updated_at' => '2026-02-10 10:01:00',
+            ],
+        ]);
+
+        DB::connection('invoice')->table('clients')->insert([
+            'id' => 1,
+            'name' => 'Client 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::connection('invoice')->table('partners')->insert([
+            'id' => 601,
+            'client_id' => 1,
+            'company_id' => null,
+            'client_partner_id' => 301,
+            'parent_partner_id' => null,
+            'name' => 'Partner B',
+            'billing_email' => null,
+            'is_active' => 1,
+            'can_view_group_invoices' => 0,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $result = app(PartnerPortalInvoiceApplyService::class)->run(clientId: 1, limit: 10, fromStart: true);
+
+        $this->assertSame(1, $result['scanned_count']);
+        $this->assertSame(1, $result['error_count']);
+        $this->assertSame(0, $result['inserted_count']);
+
+        $run = DB::connection('sakemaru')->table('doc_sync_runs')->where('id', $result['run_id'])->first();
+        $this->assertNotNull($run);
+        $this->assertSame('failed', $run->status);
+
+        $runItem = DB::connection('sakemaru')->table('doc_sync_run_items')->where('run_id', $result['run_id'])->first();
+        $this->assertNotNull($runItem);
+        $this->assertSame(1, (int) $runItem->attempt_count);
+        $this->assertSame('failed', $runItem->result_status);
+
+        $errorRow = DB::connection('sakemaru')->table('doc_sync_errors')->where('run_id', $result['run_id'])->first();
+        $this->assertNotNull($errorRow);
+        $this->assertSame(0, (int) $errorRow->is_retryable);
+
+        $this->assertNull(
+            DB::connection('invoice')->table('buyer_invoices')->where('uuid', 'uuid-should-not-run')->first()
+        );
+    }
 }

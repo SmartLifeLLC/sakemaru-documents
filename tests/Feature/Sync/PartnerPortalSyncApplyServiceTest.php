@@ -75,4 +75,61 @@ class PartnerPortalSyncApplyServiceTest extends TestCase
         $this->assertSame(1, $third['skipped_count']);
         $this->assertSame(0, $third['error_count']);
     }
+
+    public function test_apply_stops_when_error_rate_threshold_is_exceeded_and_marks_non_retryable_errors(): void
+    {
+        config([
+            'sync.partner_portal.apply.error_rate_stop' => 0.05,
+            'sync.partner_portal.apply.max_retries' => 3,
+        ]);
+
+        DB::connection('sakemaru')->table('partners')->insert([
+            [
+                'id' => 201,
+                'client_id' => 1,
+                'name' => null,
+                'is_supplier' => 0,
+                'is_active' => 1,
+                'updated_at' => '2026-02-10 10:00:00',
+            ],
+            [
+                'id' => 202,
+                'client_id' => 1,
+                'name' => 'Will Not Be Processed',
+                'is_supplier' => 0,
+                'is_active' => 1,
+                'updated_at' => '2026-02-10 10:01:00',
+            ],
+        ]);
+
+        DB::connection('invoice')->table('clients')->insert([
+            'id' => 1,
+            'name' => 'Client 1',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $result = app(PartnerPortalSyncApplyService::class)->run(clientId: 1, limit: 10, fromStart: true);
+
+        $this->assertSame(1, $result['scanned_count']);
+        $this->assertSame(0, $result['inserted_count']);
+        $this->assertSame(1, $result['error_count']);
+
+        $run = DB::connection('sakemaru')->table('doc_sync_runs')->where('id', $result['run_id'])->first();
+        $this->assertNotNull($run);
+        $this->assertSame('failed', $run->status);
+
+        $runItem = DB::connection('sakemaru')->table('doc_sync_run_items')->where('run_id', $result['run_id'])->first();
+        $this->assertNotNull($runItem);
+        $this->assertSame(1, (int) $runItem->attempt_count);
+        $this->assertSame('failed', $runItem->result_status);
+
+        $errorRow = DB::connection('sakemaru')->table('doc_sync_errors')->where('run_id', $result['run_id'])->first();
+        $this->assertNotNull($errorRow);
+        $this->assertSame(0, (int) $errorRow->is_retryable);
+
+        $this->assertNull(
+            DB::connection('invoice')->table('partners')->where('client_partner_id', 202)->first()
+        );
+    }
 }

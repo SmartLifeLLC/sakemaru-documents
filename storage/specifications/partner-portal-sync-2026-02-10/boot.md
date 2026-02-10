@@ -154,4 +154,7 @@
 - `tests/Feature/Sync/PartnerPortalSyncApplyServiceTest.php`
 - `tests/Feature/Sync/PartnerPortalInvoiceApplyServiceTest.php`
 - `tests/Feature/Sync/PartnerPortalSyncGateServiceTest.php`
+- 2026-02-11 追記: apply系サービスに S8 の停止制御を追加。
+- retryable 自動再試行（最大3回、設定値で変更可能）
+- run内 error率閾値超過で自動停止（既定 5%）
 - 運用制約: `sakemaru` への新規 migration は今後追加しない（既存テーブルの運用・実装改善のみ継続）。

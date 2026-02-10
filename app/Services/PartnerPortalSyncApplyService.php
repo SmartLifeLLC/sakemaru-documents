@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 use Throwable;
 
 class PartnerPortalSyncApplyService
@@ -23,6 +24,9 @@ class PartnerPortalSyncApplyService
         $meta = DB::connection('sakemaru');
 
         $scope = (string) config('sync.partner_portal.scope', 'partner_portal');
+        $maxRetries = max(1, (int) config('sync.partner_portal.apply.max_retries', 3));
+        $errorRateStop = max(0.0, (float) config('sync.partner_portal.apply.error_rate_stop', 0.05));
+        $retryDelayMs = max(0, (int) config('sync.partner_portal.apply.retry_delay_ms', 50));
 
         $checkpointFrom = $fromStart
             ? ['cursor_updated_at' => null, 'cursor_id' => 0, 'last_run_id' => null]
@@ -73,14 +77,12 @@ class PartnerPortalSyncApplyService
 
             $rows = $rowsQuery->limit($limit)->get();
 
-            $scanned = $rows->count();
-
-            if ($scanned === 0) {
+            if ($rows->isEmpty()) {
                 $this->finishRun(
                     $meta,
                     $runId,
                     'success',
-                    $scanned,
+                    0,
                     0,
                     0,
                     0,
@@ -103,7 +105,6 @@ class PartnerPortalSyncApplyService
             }
 
             $sourceIds = $rows->pluck('id')->all();
-
             $existing = $target->table('partners')
                 ->select(['client_partner_id', 'name', 'is_active'])
                 ->where('client_id', $clientId)
@@ -114,9 +115,13 @@ class PartnerPortalSyncApplyService
             $runItems = [];
             $errorRows = [];
             $mappingRows = [];
+            $lastProcessedRow = null;
+            $stoppedByErrorRate = false;
 
             foreach ($rows as $row) {
-                $now = now();
+                $lastProcessedRow = $row;
+                $scanned++;
+
                 $sourcePk = (string) $row->id;
                 $payload = [
                     'client_id' => (int) $row->client_id,
@@ -128,118 +133,149 @@ class PartnerPortalSyncApplyService
                 $idem = hash('sha256', 'partner|'.$payload['client_id'].'|'.$payload['client_partner_id'].'|apply');
                 $payloadHash = hash('sha256', json_encode($payload, JSON_UNESCAPED_UNICODE));
 
-                try {
-                    if (($payload['name'] ?? '') === '') {
-                        throw new \RuntimeException('partner name is empty');
-                    }
+                $attempt = 0;
 
-                    $current = $existing->get($sourcePk);
+                while ($attempt < $maxRetries) {
+                    $attempt++;
+                    $now = now();
 
-                    if ($current === null) {
-                        $target->table('partners')->insert([
-                            'client_id' => $payload['client_id'],
-                            'company_id' => null,
-                            'client_partner_id' => $payload['client_partner_id'],
-                            'parent_partner_id' => null,
-                            'name' => $payload['name'],
-                            'billing_email' => null,
-                            'is_active' => $payload['is_active'] ? 1 : 0,
-                            'can_view_group_invoices' => 0,
-                            'created_at' => $now,
-                            'updated_at' => $now,
-                        ]);
+                    try {
+                        if ($payload['name'] === '') {
+                            throw new InvalidArgumentException('partner name is empty');
+                        }
 
-                        $inserted++;
-                        $operation = 'insert';
-                        $resultStatus = 'success';
-                    } else {
-                        $needsUpdate = ((string) $current->name !== $payload['name'])
-                            || ((int) $current->is_active !== ($payload['is_active'] ? 1 : 0));
+                        $current = $existing->get($sourcePk);
 
-                        if ($needsUpdate) {
-                            $target->table('partners')
-                                ->where('client_id', $payload['client_id'])
-                                ->where('client_partner_id', $payload['client_partner_id'])
-                                ->update([
-                                    'name' => $payload['name'],
-                                    'is_active' => $payload['is_active'] ? 1 : 0,
-                                    'updated_at' => $now,
-                                ]);
-                            $updated++;
-                            $operation = 'update';
+                        if ($current === null) {
+                            $target->table('partners')->insert([
+                                'client_id' => $payload['client_id'],
+                                'company_id' => null,
+                                'client_partner_id' => $payload['client_partner_id'],
+                                'parent_partner_id' => null,
+                                'name' => $payload['name'],
+                                'billing_email' => null,
+                                'is_active' => $payload['is_active'] ? 1 : 0,
+                                'can_view_group_invoices' => 0,
+                                'created_at' => $now,
+                                'updated_at' => $now,
+                            ]);
+
+                            $inserted++;
+                            $operation = 'insert';
                             $resultStatus = 'success';
                         } else {
-                            $skipped++;
-                            $operation = 'skip';
-                            $resultStatus = 'skipped';
+                            $needsUpdate = ((string) $current->name !== $payload['name'])
+                                || ((int) $current->is_active !== ($payload['is_active'] ? 1 : 0));
+
+                            if ($needsUpdate) {
+                                $target->table('partners')
+                                    ->where('client_id', $payload['client_id'])
+                                    ->where('client_partner_id', $payload['client_partner_id'])
+                                    ->update([
+                                        'name' => $payload['name'],
+                                        'is_active' => $payload['is_active'] ? 1 : 0,
+                                        'updated_at' => $now,
+                                    ]);
+                                $updated++;
+                                $operation = 'update';
+                                $resultStatus = 'success';
+                            } else {
+                                $skipped++;
+                                $operation = 'skip';
+                                $resultStatus = 'skipped';
+                            }
                         }
+
+                        $existing->put($sourcePk, (object) [
+                            'name' => $payload['name'],
+                            'is_active' => $payload['is_active'] ? 1 : 0,
+                        ]);
+
+                        $runItems[] = [
+                            'run_id' => $runId,
+                            'entity_type' => 'partner',
+                            'source_client_id' => $payload['client_id'],
+                            'source_pk' => $sourcePk,
+                            'operation' => $operation,
+                            'idempotency_key' => $idem,
+                            'payload_hash' => $payloadHash,
+                            'result_status' => $resultStatus,
+                            'attempt_count' => $attempt,
+                            'processed_at' => $now,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+
+                        $mappingRows[] = [
+                            'entity_type' => 'partner',
+                            'source_client_id' => (int) $row->client_id,
+                            'source_id' => $sourcePk,
+                            'source_code' => null,
+                            'target_system' => 'invoice',
+                            'target_id' => (string) $payload['client_partner_id'],
+                            'mapping_status' => 'active',
+                            'confidence' => 1.00,
+                            'first_synced_at' => $now,
+                            'last_synced_at' => $now,
+                            'stale_at' => null,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+
+                        break;
+                    } catch (Throwable $e) {
+                        $isRetryable = $this->isRetryableException($e);
+
+                        if ($isRetryable && $attempt < $maxRetries) {
+                            if ($retryDelayMs > 0) {
+                                usleep($retryDelayMs * 1000);
+                            }
+
+                            continue;
+                        }
+
+                        $errors++;
+
+                        $runItems[] = [
+                            'run_id' => $runId,
+                            'entity_type' => 'partner',
+                            'source_client_id' => (int) $row->client_id,
+                            'source_pk' => $sourcePk,
+                            'operation' => 'skip',
+                            'idempotency_key' => $idem,
+                            'payload_hash' => $payloadHash,
+                            'result_status' => 'failed',
+                            'attempt_count' => $attempt,
+                            'processed_at' => $now,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+
+                        $errorRows[] = [
+                            'run_id' => $runId,
+                            'run_item_id' => null,
+                            'entity_type' => 'partner',
+                            'source_client_id' => (int) $row->client_id,
+                            'source_pk' => $sourcePk,
+                            'stage' => 'apply',
+                            'error_code' => 'apply_partner_failed',
+                            'error_message' => mb_substr($e->getMessage(), 0, 1000),
+                            'error_context' => json_encode(['exception' => get_class($e)], JSON_UNESCAPED_UNICODE),
+                            'is_retryable' => $isRetryable,
+                            'first_seen_at' => $now,
+                            'last_seen_at' => $now,
+                            'resolved_at' => null,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+
+                        break;
                     }
+                }
 
-                    $runItems[] = [
-                        'run_id' => $runId,
-                        'entity_type' => 'partner',
-                        'source_client_id' => $payload['client_id'],
-                        'source_pk' => $sourcePk,
-                        'operation' => $operation,
-                        'idempotency_key' => $idem,
-                        'payload_hash' => $payloadHash,
-                        'result_status' => $resultStatus,
-                        'attempt_count' => 1,
-                        'processed_at' => $now,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-
-                    $mappingRows[] = [
-                        'entity_type' => 'partner',
-                        'source_client_id' => (int) $row->client_id,
-                        'source_id' => $sourcePk,
-                        'source_code' => null,
-                        'target_system' => 'invoice',
-                        'target_id' => (string) $payload['client_partner_id'],
-                        'mapping_status' => 'active',
-                        'confidence' => 1.00,
-                        'first_synced_at' => $now,
-                        'last_synced_at' => $now,
-                        'stale_at' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-                } catch (Throwable $e) {
-                    $errors++;
-
-                    $runItems[] = [
-                        'run_id' => $runId,
-                        'entity_type' => 'partner',
-                        'source_client_id' => (int) $row->client_id,
-                        'source_pk' => $sourcePk,
-                        'operation' => 'skip',
-                        'idempotency_key' => $idem,
-                        'payload_hash' => $payloadHash,
-                        'result_status' => 'failed',
-                        'attempt_count' => 1,
-                        'processed_at' => $now,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
-
-                    $errorRows[] = [
-                        'run_id' => $runId,
-                        'run_item_id' => null,
-                        'entity_type' => 'partner',
-                        'source_client_id' => (int) $row->client_id,
-                        'source_pk' => $sourcePk,
-                        'stage' => 'apply',
-                        'error_code' => 'apply_partner_failed',
-                        'error_message' => mb_substr($e->getMessage(), 0, 1000),
-                        'error_context' => json_encode(['exception' => get_class($e)], JSON_UNESCAPED_UNICODE),
-                        'is_retryable' => true,
-                        'first_seen_at' => $now,
-                        'last_seen_at' => $now,
-                        'resolved_at' => null,
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ];
+                if ($scanned > 0 && ($errors / $scanned) > $errorRateStop) {
+                    $stoppedByErrorRate = true;
+                    break;
                 }
             }
 
@@ -265,13 +301,12 @@ class PartnerPortalSyncApplyService
                 }
             }
 
-            $status = $errors > 0 ? 'partial' : 'success';
+            $status = $stoppedByErrorRate ? 'failed' : ($errors > 0 ? 'partial' : 'success');
             $upsert = $inserted + $updated;
 
-            $lastRow = $rows->last();
             $checkpointTo = [
-                'cursor_updated_at' => $lastRow?->updated_at !== null ? (string) $lastRow->updated_at : $cursorUpdatedAt,
-                'cursor_id' => $lastRow !== null ? (int) $lastRow->id : $cursorId,
+                'cursor_updated_at' => $lastProcessedRow?->updated_at !== null ? (string) $lastProcessedRow->updated_at : $cursorUpdatedAt,
+                'cursor_id' => $lastProcessedRow !== null ? (int) $lastProcessedRow->id : $cursorId,
                 'last_run_id' => $runId,
             ];
 
@@ -351,5 +386,10 @@ class PartnerPortalSyncApplyService
                 'error_count' => $error,
                 'updated_at' => now(),
             ]);
+    }
+
+    private function isRetryableException(Throwable $e): bool
+    {
+        return ! $e instanceof InvalidArgumentException;
     }
 }
