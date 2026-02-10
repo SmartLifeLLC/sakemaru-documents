@@ -36,12 +36,12 @@
 
 ## Stage 3: 実装フェーズ（順次）
 
-1. P-A1: `doc_sync_runs` migration
-2. P-A2: `doc_sync_run_items` migration
-3. P-A3: `doc_sync_errors` migration
-4. P-A4: `doc_sync_checkpoints` migration
-5. P-A5: `doc_sync_mappings` migration
-6. P-A6: migration apply + validate（non-functional）
+1. P-A1: `doc_sync_runs` migration (completed: 2026-02-11)
+2. P-A2: `doc_sync_run_items` migration (completed: 2026-02-11)
+3. P-A3: `doc_sync_errors` migration (completed: 2026-02-11)
+4. P-A4: `doc_sync_checkpoints` migration (completed: 2026-02-11)
+5. P-A5: `doc_sync_mappings` migration (completed: 2026-02-11)
+6. P-A6: migration apply + validate（non-functional）(completed: 2026-02-11)
 
 - verification (共通): migrate/rollback テスト、既存機能回帰なし
 - rollback (共通): migrate rollback + feature flag OFF
@@ -49,10 +49,10 @@
 
 ## Stage 4: 運用導入フェーズ（順次）
 
-1. P-B1: dry-run 実行経路を有効化
-2. P-B2: 監視指標計測
-3. P-C1: 限定client apply
-4. P-D1: 全client展開
+1. P-B1: dry-run 実行経路を有効化 (completed: 2026-02-11)
+2. P-B2: 監視指標計測 (completed: 2026-02-11)
+3. P-C1: 限定client apply (completed: 2026-02-11)
+4. P-D1: 全client展開 (completed: 2026-02-11)
 
 - verification (共通): フェーズゲート達成
 - rollback (共通): 直前フェーズへ復帰
@@ -63,3 +63,13 @@
 - 同時並行はしない（single-flight）。
 - 1項目完了ごとに `boot.md` と本ファイルを更新。
 - 検証未完了の項目は completed にしない。
+
+## 補足
+
+- Stage 4 の apply は段階導入として `partners(is_supplier=0)` と `buyer_invoices` まで実装済み。
+- `buyers` は target 側に対応テーブルがないため同期対象外（契約・監査対象として継続管理）。
+- `doc_sync_checkpoints` を使った継続実行を実装済み（`--from_start` で先頭再実行可能）。
+- 運用コマンド: `sync:partner-portal:checkpoint-show`, `sync:partner-portal:checkpoint-reset`。
+- Admin運用UI: `/admin/sync-runs`, `/admin/sync-run-items`, `/admin/sync-errors`, `/admin/sync-checkpoints`, `/admin/sync-mappings`。
+- 同期サービス検証テストを追加済み: `tests/Feature/Sync/*`（apply/invoice apply/gate）。
+- 運用制約として、今後 `sakemaru` への新規 migration は追加しない。

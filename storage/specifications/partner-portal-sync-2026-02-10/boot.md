@@ -118,9 +118,40 @@
 
 | Task | 状態 | 更新日 | 備考 |
 |---|---|---|---|
-| P-A1: `doc_sync_runs` migration | in-progress | 2026-02-11 | Phase A先頭 |
-| P-A2: `doc_sync_run_items` migration | pending | 2026-02-11 |  |
-| P-A3: `doc_sync_errors` migration | pending | 2026-02-11 |  |
-| P-A4: `doc_sync_checkpoints` migration | pending | 2026-02-11 |  |
-| P-A5: `doc_sync_mappings` migration | pending | 2026-02-11 |  |
-| P-A6: migration apply + validate | pending | 2026-02-11 | non-functional導入確認 |
+| P-A1: `doc_sync_runs` migration | completed | 2026-02-11 | 適用済み |
+| P-A2: `doc_sync_run_items` migration | completed | 2026-02-11 | 適用済み |
+| P-A3: `doc_sync_errors` migration | completed | 2026-02-11 | 適用済み |
+| P-A4: `doc_sync_checkpoints` migration | completed | 2026-02-11 | 適用済み |
+| P-A5: `doc_sync_mappings` migration | completed | 2026-02-11 | 適用済み |
+| P-A6: migration apply + validate | completed | 2026-02-11 | `doc_sync_%` 5テーブル確認 |
+
+## 運用導入フェーズ進捗（順次実施）
+
+| Task | 状態 | 更新日 | 備考 |
+|---|---|---|---|
+| P-B1: dry-run 実行経路有効化 | completed | 2026-02-11 | `sync:partner-portal:dry-run` 実装 |
+| P-B2: 監視指標計測 | completed | 2026-02-11 | `sync:partner-portal:gate-check` 実装、5 run PASS |
+| P-C1: 限定client apply | completed | 2026-02-11 | `sync:partner-portal:apply --client_id=1 --limit=20` 成功 |
+| P-D1: 全client展開 | completed | 2026-02-11 | 対象client=1件、`--limit=20000` で全件反映/再実行skip確認 |
+
+## 実行メモ
+
+- 2026-02-11 の apply 実装は `partners(is_supplier=0)` と `buyer_invoices` を対象とした段階導入版。
+- `buyer_invoices` は `uuid` 冪等で同期し、差分なし再実行では `skip` になることを確認済み。
+- `buyers` は target 側に対応テーブルがないため、現時点は同期対象外（設計上の管理対象のみ）。
+- 2026-02-11 追記: `doc_sync_checkpoints` を利用した継続実行を実装。`--from_start` なしは checkpoint 続きから再開、`--from_start` ありは先頭から再実行。
+- 2026-02-11 追記: checkpoint 継続で `partners` / `buyer_invoices` ともに 1回目で残件処理、2回目で `scanned_count = 0` を確認。
+- 2026-02-11 追記: checkpoint 運用コマンドを追加。
+- `sync:partner-portal:checkpoint-show`
+- `sync:partner-portal:checkpoint-reset`
+- 2026-02-11 追記: Admin 同期運用UIを追加（Filament resources）。
+- `/admin/sync-runs`（実行履歴 + 実行アクション）
+- `/admin/sync-run-items`（実行明細）
+- `/admin/sync-errors`（失敗一覧 + Resolve）
+- `/admin/sync-checkpoints`（checkpoint 一覧 + Reset）
+- `/admin/sync-mappings`（source-target 対応関係 + 状態更新）
+- 2026-02-11 追記: 同期サービスの自動テストを追加。
+- `tests/Feature/Sync/PartnerPortalSyncApplyServiceTest.php`
+- `tests/Feature/Sync/PartnerPortalInvoiceApplyServiceTest.php`
+- `tests/Feature/Sync/PartnerPortalSyncGateServiceTest.php`
+- 運用制約: `sakemaru` への新規 migration は今後追加しない（既存テーブルの運用・実装改善のみ継続）。
