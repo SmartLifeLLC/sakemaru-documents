@@ -13,6 +13,8 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Storage;
+use Throwable;
 
 class BuyerInvoicesResource extends Resource
 {
@@ -56,6 +58,19 @@ class BuyerInvoicesResource extends Resource
                 ]),
             ])
             ->actions([
+                Action::make('download')
+                    ->label('ダウンロード')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('gray')
+                    ->visible(fn (BuyerInvoice $record): bool => filled($record->s3_bucket) && filled($record->s3_path))
+                    ->url(function (BuyerInvoice $record): ?string {
+                        try {
+                            return static::buildDownloadUrl($record);
+                        } catch (Throwable) {
+                            return static::buildPublicDownloadUrl($record);
+                        }
+                    })
+                    ->openUrlInNewTab(),
                 Action::make('changeStatus')
                     ->label('ステータス変更')
                     ->icon('heroicon-o-pencil-square')
@@ -120,5 +135,58 @@ class BuyerInvoicesResource extends Resource
             ->all();
 
         return $fromDb + $base;
+    }
+
+    private static function buildDownloadUrl(BuyerInvoice $record): string
+    {
+        $rawPath = ltrim((string) $record->s3_path, '/');
+        $bucket = (string) $record->s3_bucket;
+        $fileName = trim((string) ($record->file_name ?: basename($rawPath)));
+        $fallbackName = $fileName !== '' ? $fileName : 'invoice.pdf';
+        $encodedName = rawurlencode($fallbackName);
+
+        return Storage::disk('s3')->temporaryUrl(
+            $rawPath,
+            now()->addMinutes(10),
+            [
+                'Bucket' => $bucket,
+                'ResponseContentDisposition' => "attachment; filename=\"invoice.pdf\"; filename*=UTF-8''{$encodedName}",
+            ],
+        );
+    }
+
+    private static function buildPublicDownloadUrl(BuyerInvoice $record): string
+    {
+        $path = static::encodeS3Path((string) $record->s3_path);
+        $bucket = (string) $record->s3_bucket;
+        $fileName = trim((string) ($record->file_name ?: basename($path)));
+        $fallbackName = $fileName !== '' ? $fileName : 'invoice.pdf';
+        $encodedName = rawurlencode($fallbackName);
+
+        $baseUrl = trim((string) config('filesystems.disks.s3.url', ''));
+        $endpoint = trim((string) config('filesystems.disks.s3.endpoint', ''));
+        $region = trim((string) config('filesystems.disks.s3.region', 'ap-northeast-1'));
+
+        if ($baseUrl !== '') {
+            $url = rtrim($baseUrl, '/').'/'.$path;
+        } elseif ($endpoint !== '') {
+            $endpoint = rtrim($endpoint, '/');
+            $url = str_contains($endpoint, $bucket)
+                ? "{$endpoint}/{$path}"
+                : "{$endpoint}/{$bucket}/{$path}";
+        } else {
+            $url = $region !== ''
+                ? "https://{$bucket}.s3.{$region}.amazonaws.com/{$path}"
+                : "https://{$bucket}.s3.amazonaws.com/{$path}";
+        }
+
+        return $url.'?response-content-disposition='.rawurlencode("attachment; filename=\"invoice.pdf\"; filename*=UTF-8''{$encodedName}");
+    }
+
+    private static function encodeS3Path(string $path): string
+    {
+        $segments = array_filter(explode('/', ltrim($path, '/')), fn (string $segment): bool => $segment !== '');
+
+        return implode('/', array_map(static fn (string $segment): string => rawurlencode($segment), $segments));
     }
 }
