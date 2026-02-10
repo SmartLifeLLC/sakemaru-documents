@@ -70,7 +70,9 @@
 - `buyers` は target 側に対応テーブルがないため同期対象外（契約・監査対象として継続管理）。
 - `doc_sync_checkpoints` を使った継続実行を実装済み（`--from_start` で先頭再実行可能）。
 - S8 停止制御を反映済み（retryable自動再試行最大3回 / run内 error率閾値超過で停止）。
+- 接続境界を再定義済み（`mysql`=doc管理 / `sakemaru`=source / `invoice`=target）。
 - 運用コマンド: `sync:partner-portal:checkpoint-show`, `sync:partner-portal:checkpoint-reset`。
 - Admin運用UI: `/admin/sync-runs`, `/admin/sync-run-items`, `/admin/sync-errors`, `/admin/sync-checkpoints`, `/admin/sync-mappings`。
 - 同期サービス検証テストを追加済み: `tests/Feature/Sync/*`（apply/invoice apply/gate）。
+- Headless UI CRUDテストを追加済み: `tests/e2e/sync-ui-crud.spec.ts`（Playwright）。
 - 運用制約として、今後 `sakemaru` への新規 migration は追加しない。

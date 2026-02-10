@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Base\MySqlModel;
 
-class DocSyncError extends Model
+class DocSyncError extends MySqlModel
 {
-    protected $connection = 'sakemaru';
-
-    protected $table = 'doc_sync_errors';
+    protected $table = 'sync_errors';
 
     protected $guarded = [];
 

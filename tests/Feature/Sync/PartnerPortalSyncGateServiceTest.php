@@ -28,7 +28,7 @@ class PartnerPortalSyncGateServiceTest extends TestCase
     public function test_gate_passes_when_recent_runs_match_thresholds(): void
     {
         for ($i = 0; $i < 5; $i++) {
-            DB::connection('sakemaru')->table('doc_sync_runs')->insert([
+            DB::connection('mysql')->table('sync_runs')->insert([
                 'sync_scope' => 'partner_portal_test',
                 'mode' => 'dry_run',
                 'status' => 'success',
@@ -58,7 +58,7 @@ class PartnerPortalSyncGateServiceTest extends TestCase
     public function test_gate_fails_when_not_enough_runs(): void
     {
         for ($i = 0; $i < 2; $i++) {
-            DB::connection('sakemaru')->table('doc_sync_runs')->insert([
+            DB::connection('mysql')->table('sync_runs')->insert([
                 'sync_scope' => 'partner_portal_test',
                 'mode' => 'dry_run',
                 'status' => 'success',

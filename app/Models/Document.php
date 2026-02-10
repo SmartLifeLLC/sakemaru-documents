@@ -2,14 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Base\MySqlModel;
 
-class Document extends Model
+class Document extends MySqlModel
 {
-    protected $connection = 'sakemaru';
-
-    protected $table = 'documents';
-
     protected $fillable = [
         'partner_id',
         'category',

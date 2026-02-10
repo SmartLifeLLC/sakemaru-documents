@@ -17,6 +17,12 @@ trait SyncDatabaseSetup
                 'prefix' => '',
                 'foreign_key_constraints' => false,
             ],
+            'database.connections.mysql' => [
+                'driver' => 'sqlite',
+                'database' => ':memory:',
+                'prefix' => 'doc_',
+                'foreign_key_constraints' => false,
+            ],
             'database.connections.invoice' => [
                 'driver' => 'sqlite',
                 'database' => ':memory:',
@@ -26,12 +32,15 @@ trait SyncDatabaseSetup
         ]);
 
         DB::purge('sakemaru');
+        DB::purge('mysql');
         DB::purge('invoice');
 
         DB::connection('sakemaru')->getPdo();
+        DB::connection('mysql')->getPdo();
         DB::connection('invoice')->getPdo();
 
         $this->createSakemaruTables();
+        $this->createMetaTables();
         $this->createInvoiceTables();
     }
 
@@ -89,7 +98,13 @@ trait SyncDatabaseSetup
             $table->timestamp('updated_at')->nullable();
         });
 
-        $schema->create('doc_sync_runs', function (Blueprint $table): void {
+    }
+
+    private function createMetaTables(): void
+    {
+        $schema = Schema::connection('mysql');
+
+        $schema->create('sync_runs', function (Blueprint $table): void {
             $table->bigIncrements('id');
             $table->string('sync_scope', 64);
             $table->string('mode', 32);
@@ -106,7 +121,7 @@ trait SyncDatabaseSetup
             $table->timestamps();
         });
 
-        $schema->create('doc_sync_run_items', function (Blueprint $table): void {
+        $schema->create('sync_run_items', function (Blueprint $table): void {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('run_id');
             $table->string('entity_type', 32);
@@ -121,7 +136,7 @@ trait SyncDatabaseSetup
             $table->timestamps();
         });
 
-        $schema->create('doc_sync_errors', function (Blueprint $table): void {
+        $schema->create('sync_errors', function (Blueprint $table): void {
             $table->bigIncrements('id');
             $table->unsignedBigInteger('run_id');
             $table->unsignedBigInteger('run_item_id')->nullable();
@@ -139,7 +154,7 @@ trait SyncDatabaseSetup
             $table->timestamps();
         });
 
-        $schema->create('doc_sync_checkpoints', function (Blueprint $table): void {
+        $schema->create('sync_checkpoints', function (Blueprint $table): void {
             $table->bigIncrements('id');
             $table->string('sync_scope', 64);
             $table->string('entity_type', 32);
@@ -149,10 +164,10 @@ trait SyncDatabaseSetup
             $table->unsignedBigInteger('last_run_id')->nullable();
             $table->unsignedInteger('lock_version')->default(0);
             $table->timestamps();
-            $table->unique(['sync_scope', 'entity_type', 'client_id'], 'doc_sync_checkpoints_scope_entity_client_unique');
+            $table->unique(['sync_scope', 'entity_type', 'client_id'], 'sync_checkpoints_scope_entity_client_unique');
         });
 
-        $schema->create('doc_sync_mappings', function (Blueprint $table): void {
+        $schema->create('sync_mappings', function (Blueprint $table): void {
             $table->bigIncrements('id');
             $table->string('entity_type', 32);
             $table->unsignedBigInteger('source_client_id');
@@ -168,7 +183,7 @@ trait SyncDatabaseSetup
             $table->timestamps();
             $table->unique(
                 ['entity_type', 'source_client_id', 'source_id', 'target_system'],
-                'doc_sync_mappings_entity_source_target_unique'
+                'sync_mappings_entity_source_target_unique'
             );
         });
     }

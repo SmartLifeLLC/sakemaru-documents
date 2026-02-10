@@ -17,8 +17,8 @@ class PartnerPortalCheckpointResetCommand extends Command
         $clientId = $this->option('client_id');
         $entityType = $this->option('entity_type');
 
-        $query = DB::connection('sakemaru')
-            ->table('doc_sync_checkpoints')
+        $query = DB::connection('mysql')
+            ->table('sync_checkpoints')
             ->where('sync_scope', $scope)
             ->when($clientId !== null, fn ($q) => $q->where('client_id', (int) $clientId))
             ->when($entityType !== null, fn ($q) => $q->where('entity_type', (string) $entityType));

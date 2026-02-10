@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
+use App\Models\Base\SakemaruAuthenticatable;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
-use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Partner extends Authenticatable implements FilamentUser
+class Partner extends SakemaruAuthenticatable implements FilamentUser
 {
-    protected $connection = 'sakemaru';
-
     protected $table = 'partners';
 
     protected $fillable = [

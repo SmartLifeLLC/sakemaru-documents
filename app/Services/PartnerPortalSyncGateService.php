@@ -18,8 +18,8 @@ class PartnerPortalSyncGateService
         $errorRateMax = (float) config('sync.partner_portal.gates.error_rate_max', 0.005);
         $p95DurationSecondsMax = (int) config('sync.partner_portal.gates.p95_duration_seconds_max', 300);
 
-        $runs = DB::connection('sakemaru')
-            ->table('doc_sync_runs')
+        $runs = DB::connection('mysql')
+            ->table('sync_runs')
             ->where('sync_scope', $scope)
             ->where('mode', 'dry_run')
             ->where('status', 'success')

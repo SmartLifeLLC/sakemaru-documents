@@ -2,10 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Base\SakemaruModel;
 
-class Client extends Model
+class Client extends SakemaruModel
 {
     protected $fillable = ['name'];
-    //
 }

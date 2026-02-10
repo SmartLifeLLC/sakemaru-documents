@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::connection('sakemaru')->create('doc_sync_runs', function (Blueprint $table) {
+        Schema::connection('mysql')->create('sync_runs', function (Blueprint $table) {
             $table->id();
             $table->string('sync_scope', 100);
             $table->enum('mode', ['dry_run', 'apply'])->default('dry_run');
@@ -40,6 +40,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection('sakemaru')->dropIfExists('doc_sync_runs');
+        Schema::connection('mysql')->dropIfExists('sync_runs');
     }
 };

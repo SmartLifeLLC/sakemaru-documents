@@ -13,8 +13,8 @@ class PartnerPortalSyncCheckpointService
     {
         $scope = (string) config('sync.partner_portal.scope', 'partner_portal');
 
-        $row = DB::connection('sakemaru')
-            ->table('doc_sync_checkpoints')
+        $row = DB::connection('mysql')
+            ->table('sync_checkpoints')
             ->where('sync_scope', $scope)
             ->where('entity_type', $entityType)
             ->where('client_id', $clientId)
@@ -39,8 +39,8 @@ class PartnerPortalSyncCheckpointService
     {
         $scope = (string) config('sync.partner_portal.scope', 'partner_portal');
         $now = now();
-        DB::connection('sakemaru')
-            ->table('doc_sync_checkpoints')
+        DB::connection('mysql')
+            ->table('sync_checkpoints')
             ->upsert(
                 [[
                     'sync_scope' => $scope,

@@ -157,4 +157,9 @@
 - 2026-02-11 追記: apply系サービスに S8 の停止制御を追加。
 - retryable 自動再試行（最大3回、設定値で変更可能）
 - run内 error率閾値超過で自動停止（既定 5%）
+- 2026-02-11 追記: DB接続責務を分離。
+- `mysql`（`doc_` prefix）: 同期管理テーブル（`sync_*` を物理 `doc_sync_*` へ解決）
+- `sakemaru`: source業務テーブル（`partners` / `buyers` / `buyer_invoices` など）
+- `invoice`: target連携先テーブル
+- 親Model導入: `MySqlModel` / `SakemaruModel` / `InvoiceModel` と Authenticatable派生
 - 運用制約: `sakemaru` への新規 migration は今後追加しない（既存テーブルの運用・実装改善のみ継続）。

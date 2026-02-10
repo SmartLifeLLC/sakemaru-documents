@@ -21,7 +21,7 @@ class PartnerPortalInvoiceApplyService
     {
         $source = DB::connection('sakemaru');
         $target = DB::connection('invoice');
-        $meta = DB::connection('sakemaru');
+        $meta = DB::connection('mysql');
 
         $scope = (string) config('sync.partner_portal.scope', 'partner_portal');
         $maxRetries = max(1, (int) config('sync.partner_portal.apply.max_retries', 3));
@@ -32,7 +32,7 @@ class PartnerPortalInvoiceApplyService
             ? ['cursor_updated_at' => null, 'cursor_id' => 0, 'last_run_id' => null]
             : $this->checkpointService->get('buyer_invoice', $clientId);
 
-        $runId = $meta->table('doc_sync_runs')->insertGetId([
+        $runId = $meta->table('sync_runs')->insertGetId([
             'sync_scope' => $scope,
             'mode' => 'apply',
             'status' => 'running',
@@ -404,19 +404,19 @@ class PartnerPortalInvoiceApplyService
 
             if ($runItems !== []) {
                 foreach (array_chunk($runItems, 300) as $chunk) {
-                    $meta->table('doc_sync_run_items')->insert($chunk);
+                    $meta->table('sync_run_items')->insert($chunk);
                 }
             }
 
             if ($errorRows !== []) {
                 foreach (array_chunk($errorRows, 300) as $chunk) {
-                    $meta->table('doc_sync_errors')->insert($chunk);
+                    $meta->table('sync_errors')->insert($chunk);
                 }
             }
 
             if ($mappingRows !== []) {
                 foreach (array_chunk($mappingRows, 300) as $chunk) {
-                    $meta->table('doc_sync_mappings')->upsert(
+                    $meta->table('sync_mappings')->upsert(
                         $chunk,
                         ['entity_type', 'source_client_id', 'source_id', 'target_system'],
                         ['source_code', 'target_id', 'mapping_status', 'confidence', 'last_synced_at', 'stale_at', 'updated_at']
@@ -469,7 +469,7 @@ class PartnerPortalInvoiceApplyService
                 ]
             );
 
-            $meta->table('doc_sync_errors')->insert([
+            $meta->table('sync_errors')->insert([
                 'run_id' => $runId,
                 'run_item_id' => null,
                 'entity_type' => 'buyer_invoice',
@@ -496,7 +496,7 @@ class PartnerPortalInvoiceApplyService
      */
     private function finishRun($meta, int $runId, string $status, int $scanned, int $upsert, int $skip, int $error, array $checkpointTo): void
     {
-        $meta->table('doc_sync_runs')
+        $meta->table('sync_runs')
             ->where('id', $runId)
             ->update([
                 'status' => $status,

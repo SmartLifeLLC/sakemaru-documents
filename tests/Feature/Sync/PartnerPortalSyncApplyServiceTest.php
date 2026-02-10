@@ -53,8 +53,8 @@ class PartnerPortalSyncApplyServiceTest extends TestCase
         $this->assertNotNull($targetPartner);
         $this->assertSame('Partner A', $targetPartner->name);
 
-        $checkpoint = DB::connection('sakemaru')
-            ->table('doc_sync_checkpoints')
+        $checkpoint = DB::connection('mysql')
+            ->table('sync_checkpoints')
             ->where('sync_scope', 'partner_portal_test')
             ->where('entity_type', 'partner')
             ->where('client_id', 1)
@@ -115,16 +115,16 @@ class PartnerPortalSyncApplyServiceTest extends TestCase
         $this->assertSame(0, $result['inserted_count']);
         $this->assertSame(1, $result['error_count']);
 
-        $run = DB::connection('sakemaru')->table('doc_sync_runs')->where('id', $result['run_id'])->first();
+        $run = DB::connection('mysql')->table('sync_runs')->where('id', $result['run_id'])->first();
         $this->assertNotNull($run);
         $this->assertSame('failed', $run->status);
 
-        $runItem = DB::connection('sakemaru')->table('doc_sync_run_items')->where('run_id', $result['run_id'])->first();
+        $runItem = DB::connection('mysql')->table('sync_run_items')->where('run_id', $result['run_id'])->first();
         $this->assertNotNull($runItem);
         $this->assertSame(1, (int) $runItem->attempt_count);
         $this->assertSame('failed', $runItem->result_status);
 
-        $errorRow = DB::connection('sakemaru')->table('doc_sync_errors')->where('run_id', $result['run_id'])->first();
+        $errorRow = DB::connection('mysql')->table('sync_errors')->where('run_id', $result['run_id'])->first();
         $this->assertNotNull($errorRow);
         $this->assertSame(0, (int) $errorRow->is_retryable);
 

@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Base\MySqlModel;
 
-class DocSyncRunItem extends Model
+class DocSyncRunItem extends MySqlModel
 {
-    protected $connection = 'sakemaru';
-
-    protected $table = 'doc_sync_run_items';
+    protected $table = 'sync_run_items';
 
     protected $guarded = [];
 

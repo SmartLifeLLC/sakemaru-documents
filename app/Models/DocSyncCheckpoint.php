@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Base\MySqlModel;
 
-class DocSyncCheckpoint extends Model
+class DocSyncCheckpoint extends MySqlModel
 {
-    protected $connection = 'sakemaru';
-
-    protected $table = 'doc_sync_checkpoints';
+    protected $table = 'sync_checkpoints';
 
     protected $guarded = [];
 

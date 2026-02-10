@@ -14,13 +14,14 @@ class PartnerPortalSyncDryRunService
      */
     public function run(?int $clientId = null): array
     {
-        $connection = DB::connection('sakemaru');
+        $source = DB::connection('sakemaru');
+        $meta = DB::connection('mysql');
         $scope = (string) config('sync.partner_portal.scope', 'partner_portal');
 
-        return $connection->transaction(function () use ($connection, $clientId, $scope): array {
+        return $meta->transaction(function () use ($source, $meta, $clientId, $scope): array {
             $now = now();
 
-            $runId = $connection->table('doc_sync_runs')->insertGetId([
+            $runId = $meta->table('sync_runs')->insertGetId([
                 'sync_scope' => $scope,
                 'mode' => 'dry_run',
                 'status' => 'running',
@@ -30,7 +31,7 @@ class PartnerPortalSyncDryRunService
                 'updated_at' => $now,
             ]);
 
-            $partnersQuery = $connection->table('partners')->where('is_supplier', 0);
+            $partnersQuery = $source->table('partners')->where('is_supplier', 0);
 
             if ($clientId !== null) {
                 $partnersQuery->where('client_id', $clientId);
@@ -38,7 +39,7 @@ class PartnerPortalSyncDryRunService
 
             $partnersCount = (int) (clone $partnersQuery)->count();
 
-            $buyersCount = (int) $connection->table('buyers as b')
+            $buyersCount = (int) $source->table('buyers as b')
                 ->join('partners as p', function ($join): void {
                     $join->on('b.partner_id', '=', 'p.id')
                         ->on('b.client_id', '=', 'p.client_id');
@@ -47,7 +48,7 @@ class PartnerPortalSyncDryRunService
                 ->when($clientId !== null, fn ($q) => $q->where('p.client_id', $clientId))
                 ->count();
 
-            $invoicesCount = (int) $connection->table('buyer_invoices as bi')
+            $invoicesCount = (int) $source->table('buyer_invoices as bi')
                 ->join('partners as p', function ($join): void {
                     $join->on('bi.partner_id', '=', 'p.id')
                         ->on('bi.client_id', '=', 'p.client_id');
@@ -58,7 +59,7 @@ class PartnerPortalSyncDryRunService
 
             $scannedCount = $partnersCount + $buyersCount + $invoicesCount;
 
-            $connection->table('doc_sync_runs')
+            $meta->table('sync_runs')
                 ->where('id', $runId)
                 ->update([
                     'status' => 'success',

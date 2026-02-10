@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::connection('sakemaru')->create('doc_sync_run_items', function (Blueprint $table) {
+        Schema::connection('mysql')->create('sync_run_items', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('run_id');
             $table->string('entity_type', 50);
@@ -42,6 +42,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection('sakemaru')->dropIfExists('doc_sync_run_items');
+        Schema::connection('mysql')->dropIfExists('sync_run_items');
     }
 };

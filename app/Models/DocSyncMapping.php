@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Base\MySqlModel;
 
-class DocSyncMapping extends Model
+class DocSyncMapping extends MySqlModel
 {
-    protected $connection = 'sakemaru';
-
-    protected $table = 'doc_sync_mappings';
+    protected $table = 'sync_mappings';
 
     protected $guarded = [];
 
