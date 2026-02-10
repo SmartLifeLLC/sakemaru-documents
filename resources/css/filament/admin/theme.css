@@ -1,5 +1,8 @@
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 @import '../common/_layout-base.css';
+@source '../../../../app/Filament/**/*.php';
+@source '../../../../app/Livewire/**/*.php';
+@source '../../../../resources/views/**/*.blade.php';
 
 /* テーブルコンパクト化 */
 .fi-ta-row { min-height: 0 !important; height: auto !important; }

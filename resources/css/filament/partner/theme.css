@@ -1,5 +1,8 @@
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 @import '../common/_layout-base.css';
+@source '../../../../app/Filament/**/*.php';
+@source '../../../../app/Livewire/**/*.php';
+@source '../../../../resources/views/**/*.blade.php';
 
 /* Partner パネルはシンプルに */
 .fi-topbar { height: 2.5rem; }
