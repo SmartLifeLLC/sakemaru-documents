@@ -26,12 +26,17 @@ class PartnerPanelProvider extends PanelProvider
         return $panel
             ->id('partner')
             ->path('partner')
-            ->login(\App\Filament\Pages\Auth\CustomLogin::class)
-            ->authGuard('web')
-            ->brandLogo(asset('images/logo-small.jpg'))
+            ->login(\App\Filament\Partner\Pages\Auth\Login::class)
+            ->authGuard('partner')
+            ->topNavigation()
+            ->maxContentWidth('full')
+            ->breadcrumbs(false)
+            ->viteTheme('resources/css/filament/partner/theme.css')
+            ->brandLogo(asset('images/logo.png'))
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->darkMode(false)
             ->discoverResources(in: app_path('Filament/Partner/Resources'), for: 'App\Filament\Partner\Resources')
             ->discoverPages(in: app_path('Filament/Partner/Pages'), for: 'App\Filament\Partner\Pages')
             ->pages([

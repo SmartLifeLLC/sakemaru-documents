@@ -27,9 +27,13 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->default()
-            ->login(\App\Filament\Pages\Auth\CustomLogin::class)
-            ->authGuard('admin')
-            ->brandLogo(asset('images/logo-small.jpg'))
+            ->login(\App\Filament\Pages\Auth\Login::class)
+            ->authGuard('web')
+            ->topNavigation()
+            ->maxContentWidth('full')
+            ->breadcrumbs(false)
+            ->viteTheme('resources/css/filament/admin/theme.css')
+            ->brandLogo(asset('images/logo.png'))
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -47,7 +51,7 @@ class AdminPanelProvider extends PanelProvider
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
-                AuthenticateSession::class,
+                // AuthenticateSession::class, // Disabled for cross-app session sharing
                 ShareErrorsFromSession::class,
                 VerifyCsrfToken::class,
                 SubstituteBindings::class,

@@ -1,0 +1,52 @@
+@import '/vendor/filament/filament/resources/css/theme.css';
+@import '../common/_layout-base.css';
+
+/* テーブルコンパクト化 */
+.fi-ta-row { min-height: 0 !important; height: auto !important; }
+.fi-ta-cell { padding: 1px 2px !important; margin: 0 !important; }
+
+/* ストライプカラー */
+.fi-ta-row:nth-child(odd) { background-color: rgba(59, 130, 246, 0.05); }
+.fi-ta-row:nth-child(even) { background-color: white; }
+
+/* スティッキーアクション */
+.sticky-actions .fi-ta-actions-cell,
+.sticky-actions th:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 10;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+}
+
+/* トップバー高さ削減 */
+.fi-topbar { height: 2.5rem; }
+
+/* テーブルスクロール固定 */
+.fi-ta {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 10rem);
+}
+.fi-ta-ctn {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+.fi-ta thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: white;
+}
+.fi-ta-footer {
+    flex-shrink: 0;
+    background-color: white;
+    border-top: 1px solid rgb(229 231 235);
+}
+
+/* モーダルユーティリティ */
+.modal-split-left { @apply bg-gray-50 dark:bg-gray-800 rounded-lg p-4; }
+.modal-info-card { @apply bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700; }
+.modal-label { @apply text-xs text-gray-500 dark:text-gray-400 mb-1; }
+.modal-value { @apply text-sm font-medium text-gray-900 dark:text-gray-100; }

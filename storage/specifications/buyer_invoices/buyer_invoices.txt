@@ -1,0 +1,59 @@
+-- auto-generated definition
+create table buyer_invoices
+(
+    id                          bigint unsigned auto_increment
+        primary key,
+    uuid                        char(36)                      not null,
+    client_id                   bigint unsigned               not null,
+    closing_bill_id             bigint unsigned               not null comment 'closing_bills.id',
+    closing_balance_overview_id bigint unsigned               not null comment 'closing_balance_overviews.id',
+    closing_balance_price_id    bigint unsigned               not null comment 'closing_balance_prices.id',
+    partner_id                  bigint unsigned               not null,
+    closing_date                date                          not null,
+    s3_bucket                   varchar(100)                  not null,
+    s3_path                     varchar(500)                  not null,
+    file_name                   varchar(255)                  not null,
+    file_size                   bigint unsigned               null,
+    file_hash                   char(64)                      null comment 'SHA-256',
+    page_count                  int unsigned                  null,
+    partner_code                varchar(50)                   not null,
+    partner_name                varchar(255)                  not null,
+    invoice_number              varchar(50)                   null,
+    billing_amount              bigint      default 0         not null,
+    status                      varchar(20) default 'pending' not null comment 'pending/synced/canceled/paid',
+    print_type                  varchar(50)                   not null comment 'INVOICE / INVOICE_FOR_PAYMENT_SLIP',
+    creator_id                  bigint unsigned               not null,
+    is_active                   tinyint(1)  default 1         not null,
+    created_at                  timestamp                     null,
+    updated_at                  timestamp                     null,
+    constraint buyer_invoices_uuid_unique
+        unique (uuid)
+)
+    collate = utf8mb4_unicode_ci;
+
+create index buyer_invoices_client_partner_date_idx
+    on buyer_invoices (client_id, partner_id, closing_date);
+
+create index buyer_invoices_client_status_date_idx
+    on buyer_invoices (client_id, status, closing_date);
+
+create index buyer_invoices_closing_bill_idx
+    on buyer_invoices (closing_bill_id);
+
+create index buyer_invoices_creator_idx
+    on buyer_invoices (creator_id);
+
+create index buyer_invoices_overview_idx
+    on buyer_invoices (closing_balance_overview_id);
+
+create index buyer_invoices_partner_idx
+    on buyer_invoices (partner_id);
+
+create index buyer_invoices_price_idx
+    on buyer_invoices (closing_balance_price_id);
+
+
+
+実データ
+id,uuid,client_id,closing_bill_id,closing_balance_overview_id,closing_balance_price_id,partner_id,closing_date,s3_bucket,s3_path,file_name,file_size,file_hash,page_count,partner_code,partner_name,invoice_number,billing_amount,metadata,status,print_type,creator_id,is_active,created_at,updated_at
+1522,318301b0-6a14-4425-9f99-d17fa0a42550,1,991132,2155063,278719,17839,2026-01-31,bzcore-stg,documents/buyer-invoices/9207/20260131_☆◇／南千住Bar GO南千住店_136590_請求書_1000053893.pdf,20260131_☆◇／南千住Bar GO南千住店_136590_請求書_1000053893.pdf,572642,e791c840238af6650095092e753df73fb9a7ce632e2eeedb8b86542599caf617,6,9207,☆◇／南千住Bar GO南千住店,1000053893,136590,"{""branch"": {""code"": 1, ""name"": ""株式会社　谷口""}, ""summary"": {""billing"": {""total"": 136630, ""tax_8_percent"": 2247, ""tax_10_percent"": 9658, ""total_0_percent"": 60, ""subtotal_8_percent"": 28086, ""subtotal_10_percent"": 96579}, ""deposit_total"": 0, ""return_billing"": {""total"": 40, ""tax_8_percent"": 0, ""tax_10_percent"": 0, ""total_0_percent"": 40, ""subtotal_8_percent"": 0, ""subtotal_10_percent"": 0}, ""net_purchase_amount"": 136590, ""balance_after_deposit"": 0, ""current_billing_amount"": 136590, ""previous_balance_amount"": 0}, ""salesman"": {""code"": 118, ""name"": ""石川 健""}}",pending,INVOICE,426,1,2026-02-10 17:30:38,2026-02-10 17:30:38

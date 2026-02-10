@@ -1,0 +1,35 @@
+  Schema::create('buyer_invoices', function (Blueprint $table) {
+            $table->id();
+            $table->uuid('uuid')->unique();
+            $table->foreignId('client_id');
+            $table->unsignedBigInteger('closing_bill_id')->comment('closing_bills.id');
+            $table->unsignedBigInteger('closing_balance_overview_id')->comment('closing_balance_overviews.id');
+            $table->unsignedBigInteger('closing_balance_price_id')->comment('closing_balance_prices.id');
+            $table->foreignId('partner_id')->constrained()->cascadeOnDelete();
+            $table->date('closing_date');
+            $table->string('s3_bucket', 100);
+            $table->string('s3_path', 500);
+            $table->string('file_name');
+            $table->unsignedBigInteger('file_size')->nullable();
+            $table->char('file_hash', 64)->nullable()->comment('SHA-256');
+            $table->unsignedInteger('page_count')->nullable();
+            $table->string('partner_code', 50);
+            $table->string('partner_name');
+            $table->string('invoice_number', 50)->nullable();
+            $table->bigInteger('billing_amount')->default(0);
+            $table->json('metadata')->nullable();
+            $table->string('status', 20)->default('pending')->comment('pending/synced/canceled/paid');
+            $table->string('print_type', 50)->comment('INVOICE / INVOICE_FOR_PAYMENT_SLIP');
+            $table->foreignId('creator_id');
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+
+            $table->index(['client_id', 'partner_id', 'closing_date'], 'buyer_invoices_client_partner_date_idx');
+            $table->index(['client_id', 'status', 'closing_date'], 'buyer_invoices_client_status_date_idx');
+            $table->index('closing_bill_id', 'buyer_invoices_closing_bill_idx');
+            $table->index('creator_id', 'buyer_invoices_creator_idx');
+            $table->index('closing_balance_overview_id', 'buyer_invoices_overview_idx');
+            $table->index('partner_id', 'buyer_invoices_partner_idx');
+            $table->index('closing_balance_price_id', 'buyer_invoices_price_idx');
+        });
+    }
