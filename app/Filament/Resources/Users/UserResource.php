@@ -18,7 +18,6 @@ use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Support\Enums\Heroicon;
 use Throwable;
 
 class UserResource extends Resource
@@ -127,7 +126,7 @@ class UserResource extends Resource
             ->actions([
                 Actions\Action::make('startInvoiceOnboarding')
                     ->label('連携開始')
-                    ->icon(Heroicon::OutlinedPaperAirplane)
+                    ->icon('heroicon-o-paper-airplane')
                     ->color('success')
                     ->form([
                         Forms\Components\TextInput::make('initial_email')
@@ -162,7 +161,7 @@ class UserResource extends Resource
                     ->visible(fn (Partner $record): bool => ! (bool) $record->is_supplier),
                 Actions\Action::make('resendInvoiceOnboarding')
                     ->label('連携再送')
-                    ->icon(Heroicon::OutlinedArrowPath)
+                    ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->form([
                         Forms\Components\TextInput::make('initial_email')
