@@ -8,14 +8,17 @@ use App\Filament\Resources\Users\Pages\ListUsers;
 use App\Filament\Resources\Users\UserResource\Pages;
 use App\Filament\Resources\Users\UserResource\RelationManagers;
 use App\Models\Partner;
+use App\Services\InvoiceOnboardingStartService;
 use BackedEnum;
 use Filament\Actions;
 use Filament\Forms;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Support\Enums\Heroicon;
+use Throwable;
 
 class UserResource extends Resource
 {
@@ -91,6 +94,41 @@ class UserResource extends Resource
                 //
             ])
             ->actions([
+                Actions\Action::make('startInvoiceOnboarding')
+                    ->label('連携開始')
+                    ->icon(Heroicon::OutlinedPaperAirplane)
+                    ->color('success')
+                    ->form([
+                        Forms\Components\TextInput::make('initial_email')
+                            ->label('初期メールアドレス')
+                            ->email()
+                            ->default(fn (Partner $record): ?string => $record->email)
+                            ->required()
+                            ->maxLength(255),
+                    ])
+                    ->action(function (Partner $record, array $data): void {
+                        try {
+                            $result = app(InvoiceOnboardingStartService::class)->start(
+                                partner: $record,
+                                initialEmail: (string) $data['initial_email'],
+                                requestedBy: auth('web')->id(),
+                            );
+
+                            Notification::make()
+                                ->title('連携リクエストを登録しました')
+                                ->body("status={$result['status']} / dedupe={$result['dedupe_key']}")
+                                ->success()
+                                ->send();
+                        } catch (Throwable $e) {
+                            Notification::make()
+                                ->title('連携開始に失敗しました')
+                                ->body(mb_substr($e->getMessage(), 0, 500))
+                                ->danger()
+                                ->send();
+                        }
+                    })
+                    ->requiresConfirmation()
+                    ->visible(fn (Partner $record): bool => ! (bool) $record->is_supplier),
                 Actions\EditAction::make(),
             ])
             ->bulkActions([
