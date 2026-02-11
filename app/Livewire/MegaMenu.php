@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Filament\Resources\BuyerInvoicesResource;
+use App\Filament\Resources\DocumentChangeRequestsResource;
 use App\Enums\EMenuCategory;
 use App\Filament\Resources\Documents\DocumentResource;
 use App\Filament\Resources\SyncRunItemsResource;
@@ -27,6 +28,10 @@ class MegaMenu extends Component
                     [
                         'label' => '請求書（酒丸）',
                         'url' => BuyerInvoicesResource::getUrl(),
+                    ],
+                    [
+                        'label' => '修正依頼一覧',
+                        'url' => DocumentChangeRequestsResource::getUrl(),
                     ],
                 ],
             ],

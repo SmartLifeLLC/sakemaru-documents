@@ -53,7 +53,8 @@
     @livewireStyles
 </head>
 <body class="bg-image min-h-screen flex items-center justify-center font-sans text-gray-800 relative">
-    
+    <div id="intro-video" class="hidden" aria-hidden="true"></div>
+
     <!-- Background Overlay -->
     <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] z-0"></div>
 

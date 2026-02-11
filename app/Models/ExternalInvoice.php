@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Models\Base\SakemaruModel;
 
-class BuyerInvoice extends SakemaruModel
+class ExternalInvoice extends SakemaruModel
 {
     protected $table = 'external_invoices';
 
