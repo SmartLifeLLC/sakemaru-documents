@@ -81,6 +81,25 @@ class CustomInvoiceQueueClient
         return $row === null ? null : (array) $row;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findLatestBySourceDocumentUuid(string $sourceDocumentUuid): ?array
+    {
+        $sourceDocumentUuid = trim($sourceDocumentUuid);
+        if ($sourceDocumentUuid === '') {
+            throw new InvalidArgumentException('sourceDocumentUuid is required');
+        }
+
+        $row = DB::connection($this->readConnectionName())
+            ->table('custom_invoice_queue')
+            ->where('source_document_uuid', $sourceDocumentUuid)
+            ->orderByDesc('id')
+            ->first();
+
+        return $row === null ? null : (array) $row;
+    }
+
     private function readConnectionName(): string
     {
         return is_array(config('database.connections.sakemaru_read'))

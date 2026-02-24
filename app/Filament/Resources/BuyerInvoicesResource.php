@@ -10,6 +10,7 @@ use App\Services\DocumentPublishClient;
 use App\Services\ExternalInvoiceClient;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
@@ -30,6 +31,10 @@ use Throwable;
 class BuyerInvoicesResource extends Resource
 {
     protected static ?string $model = BuyerInvoice::class;
+    /** @var array<string, array<string, mixed>|null> */
+    private static array $latestQueueCache = [];
+    /** @var array<string, bool> */
+    private static array $publishedStateCache = [];
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
@@ -59,6 +64,10 @@ class BuyerInvoicesResource extends Resource
                 Tables\Columns\TextColumn::make('closing_date')->label('締日')->date()->sortable(),
                 Tables\Columns\TextColumn::make('billing_amount')->label('請求金額')->money('JPY')->sortable(),
                 Tables\Columns\TextColumn::make('status')->label('ステータス')->badge()->searchable(),
+                Tables\Columns\IconColumn::make('published_to_invoice')
+                    ->label('公開')
+                    ->boolean()
+                    ->state(fn (BuyerInvoice $record): bool => static::isPublishedToInvoice($record)),
                 Tables\Columns\TextColumn::make('is_active')->label('有効')->badge()
                     ->formatStateUsing(fn (bool $state): string => $state ? '有効' : '無効'),
                 Tables\Columns\TextColumn::make('updated_at')->label('更新日時')->dateTime()->sortable(),
@@ -70,60 +79,11 @@ class BuyerInvoicesResource extends Resource
                     '0' => '無効',
                 ]),
             ])
-            ->headerActions([
-                Action::make('createCustomInvoice')
-                    ->label('新規作成キュー登録')
-                    ->icon('heroicon-o-plus-circle')
-                    ->color('primary')
-                    ->modalHeading('新規作成フォーム')
-                    ->modalDescription('JSON v1を組み立てて custom_invoice_queue に登録します。')
-                    ->form(static::customInvoiceFormSchema(false))
-                    ->fillForm(fn (): array => static::defaultCreateFormValues())
-                    ->action(function (array $data): void {
-                        static::enqueueFromForm('create', $data);
-                    }),
-                Action::make('checkQueueStatus')
-                    ->label('キュー状態確認')
-                    ->icon('heroicon-o-magnifying-glass-circle')
-                    ->color('gray')
-                    ->form([
-                        TextInput::make('queue_uuid')
-                            ->label('queue_uuid')
-                            ->required()
-                            ->maxLength(191),
-                    ])
-                    ->action(function (array $data): void {
-                        try {
-                            $status = app(CustomInvoiceQueueClient::class)->getStatus((string) $data['queue_uuid']);
-
-                            if ($status === null) {
-                                Notification::make()
-                                    ->title('未検出')
-                                    ->body('指定された queue_uuid は存在しません。')
-                                    ->warning()
-                                    ->send();
-
-                                return;
-                            }
-
-                            Notification::make()
-                                ->title('キュー状態')
-                                ->body(static::buildQueueStatusMessage($status))
-                                ->success()
-                                ->send();
-                        } catch (Throwable $e) {
-                            Notification::make()
-                                ->title('状態取得失敗')
-                                ->body(mb_substr($e->getMessage(), 0, 500))
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-            ])
+            ->headerActions([])
             ->actions([
                 Action::make('download')
-                    ->label('ダウンロード')
-                    ->icon('heroicon-o-arrow-down-tray')
+                    ->label('PDF確認')
+                    ->icon('heroicon-o-eye')
                     ->color('gray')
                     ->visible(fn (BuyerInvoice $record): bool => filled($record->s3_bucket) && filled($record->s3_path))
                     ->url(function (BuyerInvoice $record): ?string {
@@ -134,154 +94,18 @@ class BuyerInvoicesResource extends Resource
                         }
                     })
                     ->openUrlInNewTab(),
-                Action::make('changeStatus')
-                    ->label('ステータス変更')
-                    ->icon('heroicon-o-pencil-square')
-                    ->form([
-                        Select::make('status')
-                            ->label('新しいステータス')
-                            ->options(fn (): array => static::statusOptions())
-                            ->required(),
-                    ])
-                    ->fillForm(fn (BuyerInvoice $record): array => [
-                        'status' => $record->status,
-                    ])
-                    ->action(function (BuyerInvoice $record, array $data): void {
-                        $newStatus = (string) $data['status'];
-
-                        if ($record->status === $newStatus) {
-                            Notification::make()
-                                ->title('変更なし')
-                                ->body('ステータスは既に同じ値です。')
-                                ->warning()
-                                ->send();
-
-                            return;
-                        }
-
-                        $record->update([
-                            'status' => $newStatus,
-                            'updated_at' => now(),
-                        ]);
-
-                        Notification::make()
-                            ->title('更新完了')
-                            ->body("ステータスを {$newStatus} に更新しました。")
-                            ->success()
-                            ->send();
-                    }),
-                Action::make('reviseInitialValues')
-                    ->label('修正初期値')
-                    ->icon('heroicon-o-arrow-path')
-                    ->color('primary')
-                    ->modalHeading('修正フォーム初期値（external_invoices）')
-                    ->modalDescription('同一DB external_invoices から取得した結果です。')
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('閉じる')
-                    ->form([
-                        TextInput::make('source_uuid')->label('source_uuid')->disabled()->dehydrated(false),
-                        TextInput::make('partner_name')->label('取引先名')->disabled()->dehydrated(false),
-                        TextInput::make('partner_code')->label('取引先コード')->disabled()->dehydrated(false),
-                        TextInput::make('invoice_number')->label('請求書番号')->disabled()->dehydrated(false),
-                        TextInput::make('closing_date')->label('締日')->disabled()->dehydrated(false),
-                        TextInput::make('billing_amount')->label('請求金額')->disabled()->dehydrated(false),
-                        TextInput::make('print_type')->label('print_type')->disabled()->dehydrated(false),
-                        TextInput::make('branch')->label('branch')->disabled()->dehydrated(false),
-                        TextInput::make('salesman')->label('salesman')->disabled()->dehydrated(false),
-                        Textarea::make('summary_json')
-                            ->label('summary JSON')
-                            ->rows(6)
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->columnSpanFull(),
-                        Textarea::make('metadata_json')
-                            ->label('metadata JSON')
-                            ->rows(10)
-                            ->disabled()
-                            ->dehydrated(false)
-                            ->columnSpanFull(),
-                        Placeholder::make('api_note')
-                            ->label('注記')
-                            ->content('P2でこの初期値を実フォームにマッピングします。')
-                            ->columnSpanFull(),
-                    ])
-                    ->fillForm(fn (BuyerInvoice $record): array => static::buildReviseInitialValues((string) $record->uuid)),
-                Action::make('reviseCustomInvoice')
-                    ->label('修正キュー登録')
-                    ->icon('heroicon-o-paper-airplane')
-                    ->color('primary')
-                    ->modalHeading('修正フォーム')
-                    ->modalDescription('修正内容を JSON v1 で組み立てて custom_invoice_queue へ登録します。')
-                    ->form(static::customInvoiceFormSchema(true))
-                    ->fillForm(fn (BuyerInvoice $record): array => static::defaultReviseFormValues((string) $record->uuid))
-                    ->action(function (BuyerInvoice $record, array $data): void {
-                        $data['source_uuid'] = (string) $record->uuid;
-                        static::enqueueFromForm('revise', $data);
-                    }),
-                Action::make('previewPublish')
-                    ->label('公開プレビュー')
-                    ->icon('heroicon-o-eye')
-                    ->color('gray')
-                    ->modalHeading('公開同期プレビュー')
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('閉じる')
-                    ->form([
-                        TextInput::make('source_uuid')->label('source_uuid')->disabled()->dehydrated(false),
-                        TextInput::make('target_table')->label('target_table')->disabled()->dehydrated(false),
-                        Textarea::make('payload_json')->label('upsert payload')->rows(12)->disabled()->dehydrated(false)->columnSpanFull(),
-                    ])
-                    ->fillForm(function (BuyerInvoice $record): array {
-                        try {
-                            $preview = app(DocumentPublishClient::class)->buildPreview((string) $record->uuid);
-
-                            return [
-                                'source_uuid' => (string) $record->uuid,
-                                'target_table' => (string) $preview['table'],
-                                'payload_json' => static::encodeJsonForDisplay((array) ($preview['payload'] ?? [])),
-                            ];
-                        } catch (Throwable $e) {
-                            Notification::make()
-                                ->title('プレビュー失敗')
-                                ->body(mb_substr($e->getMessage(), 0, 500))
-                                ->danger()
-                                ->send();
-
-                            return [
-                                'source_uuid' => (string) $record->uuid,
-                                'target_table' => '-',
-                                'payload_json' => '{}',
-                            ];
-                        }
-                    }),
                 Action::make('publishToInvoice')
                     ->label('公開')
                     ->icon('heroicon-o-arrow-up-circle')
                     ->color('success')
-                    ->form([
-                        TextInput::make('queue_uuid')
-                            ->label('queue_uuid（succeeded確認用）')
-                            ->required()
-                            ->maxLength(191),
-                    ])
                     ->requiresConfirmation()
-                    ->action(function (BuyerInvoice $record, array $data): void {
+                    ->visible(fn (BuyerInvoice $record): bool => $record->status !== 'canceled')
+                    ->action(function (BuyerInvoice $record): void {
                         try {
-                            $status = app(CustomInvoiceQueueClient::class)->getStatus((string) $data['queue_uuid']);
-                            if ($status === null) {
+                            if (static::isPublishedToInvoice($record)) {
                                 Notification::make()
-                                    ->title('公開中止')
-                                    ->body('queue_uuid が見つかりません。')
-                                    ->warning()
-                                    ->send();
-
-                                return;
-                            }
-
-                            $state = (string) ($status['status'] ?? '');
-                            if ($state !== 'succeeded') {
-                                Notification::make()
-                                    ->title('公開中止')
-                                    ->body("queue status が succeeded ではありません（現在: {$state}）。")
+                                    ->title('公開済み')
+                                    ->body('この請求書は既に公開されています。')
                                     ->warning()
                                     ->send();
 
@@ -289,10 +113,11 @@ class BuyerInvoicesResource extends Resource
                             }
 
                             app(DocumentPublishClient::class)->publish((string) $record->uuid);
+                            static::rememberPublishedState((string) $record->uuid, true);
 
                             Notification::make()
                                 ->title('公開同期完了')
-                                ->body("uuid={$record->uuid} を invoice documents に同期しました（queue={$data['queue_uuid']}）。")
+                                ->body("uuid={$record->uuid} を invoice documents に同期しました。")
                                 ->success()
                                 ->send();
                         } catch (Throwable $e) {
@@ -303,30 +128,81 @@ class BuyerInvoicesResource extends Resource
                                 ->send();
                         }
                     }),
-                Action::make('unpublishFromInvoice')
-                    ->label('公開取り消し')
+                Action::make('cancelInvoice')
+                    ->label('キャンセル')
                     ->icon('heroicon-o-arrow-down-circle')
                     ->color('warning')
                     ->requiresConfirmation()
+                    ->visible(fn (BuyerInvoice $record): bool => $record->status !== 'canceled')
                     ->action(function (BuyerInvoice $record): void {
                         try {
-                            $updated = app(DocumentPublishClient::class)->unpublish((string) $record->uuid);
+                            $unpublished = app(DocumentPublishClient::class)->unpublish((string) $record->uuid);
+                            static::rememberPublishedState((string) $record->uuid, false);
+                            $record->update([
+                                'status' => 'canceled',
+                                'updated_at' => now(),
+                            ]);
 
                             Notification::make()
-                                ->title($updated ? '公開取り消し完了' : '対象なし')
-                                ->body($updated ? "uuid={$record->uuid} を非公開化しました。" : '対象レコードが見つかりません。')
-                                ->{$updated ? 'success' : 'warning'}()
+                                ->title('キャンセル完了')
+                                ->body($unpublished
+                                    ? "uuid={$record->uuid} をキャンセルし、公開も取り消しました。"
+                                    : "uuid={$record->uuid} をキャンセルしました（公開データは未作成）。")
+                                ->success()
                                 ->send();
                         } catch (Throwable $e) {
                             Notification::make()
-                                ->title('公開取り消し失敗')
+                                ->title('キャンセル失敗')
                                 ->body(mb_substr($e->getMessage(), 0, 500))
                                 ->danger()
                                 ->send();
                         }
                     }),
             ])
-            ->bulkActions([]);
+            ->bulkActions([
+                BulkAction::make('bulkPublishToInvoice')
+                    ->label('選択した請求書を公開')
+                    ->icon('heroicon-o-arrow-up-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->action(function ($records): void {
+                        $published = 0;
+                        $skipped = 0;
+                        $failed = 0;
+
+                        foreach ($records as $record) {
+                            if (! $record instanceof BuyerInvoice) {
+                                continue;
+                            }
+
+                            try {
+                                if ((string) $record->status === 'canceled') {
+                                    $skipped++;
+
+                                    continue;
+                                }
+
+                                if (static::isPublishedToInvoice($record)) {
+                                    $skipped++;
+
+                                    continue;
+                                }
+
+                                app(DocumentPublishClient::class)->publish((string) $record->uuid);
+                                static::rememberPublishedState((string) $record->uuid, true);
+                                $published++;
+                            } catch (Throwable) {
+                                $failed++;
+                            }
+                        }
+
+                        Notification::make()
+                            ->title('一括公開結果')
+                            ->body("公開={$published}件 / スキップ={$skipped}件 / 失敗={$failed}件")
+                            ->{$failed > 0 ? 'warning' : 'success'}()
+                            ->send();
+                    }),
+            ]);
     }
 
     public static function getPages(): array
@@ -676,6 +552,67 @@ class BuyerInvoicesResource extends Resource
         }
 
         return "queue_uuid={$queueUuid} / status={$state} / error={$error}";
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function findLatestQueueForRecord(BuyerInvoice $record): ?array
+    {
+        $sourceUuid = trim((string) ($record->uuid ?? ''));
+
+        if ($sourceUuid === '') {
+            return null;
+        }
+
+        if (array_key_exists($sourceUuid, static::$latestQueueCache)) {
+            return static::$latestQueueCache[$sourceUuid];
+        }
+
+        return static::$latestQueueCache[$sourceUuid] = app(CustomInvoiceQueueClient::class)
+            ->findLatestBySourceDocumentUuid($sourceUuid);
+    }
+
+    private static function latestQueueStatusLabelForRecord(BuyerInvoice $record): string
+    {
+        $latest = static::findLatestQueueForRecord($record);
+
+        if ($latest === null) {
+            return '未登録（この請求書に対する修正キューはまだありません）';
+        }
+
+        $status = (string) ($latest['status'] ?? '-');
+        $queueUuid = (string) ($latest['queue_uuid'] ?? '-');
+
+        return "status={$status} / queue_uuid={$queueUuid}";
+    }
+
+    private static function isPublishedToInvoice(BuyerInvoice $record): bool
+    {
+        $uuid = trim((string) ($record->uuid ?? ''));
+
+        if ($uuid === '') {
+            return false;
+        }
+
+        if (array_key_exists($uuid, static::$publishedStateCache)) {
+            return static::$publishedStateCache[$uuid];
+        }
+
+        try {
+            return static::$publishedStateCache[$uuid] = app(DocumentPublishClient::class)->isPublished($uuid);
+        } catch (Throwable) {
+            return static::$publishedStateCache[$uuid] = false;
+        }
+    }
+
+    private static function rememberPublishedState(string $uuid, bool $published): void
+    {
+        $uuid = trim($uuid);
+
+        if ($uuid !== '') {
+            static::$publishedStateCache[$uuid] = $published;
+        }
     }
 
     /**
