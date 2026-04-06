@@ -36,6 +36,7 @@ class DocumentChangeClientsTest extends TestCase
             $table->unsignedBigInteger('requester_partner_id')->nullable();
             $table->string('status')->default('open');
             $table->text('requested_payload_json')->nullable();
+            $table->timestamp('resolved_at')->nullable();
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
         });
