@@ -3,10 +3,32 @@
 @source '../../../../app/Filament/**/*.php';
 @source '../../../../app/Livewire/**/*.php';
 @source '../../../../resources/views/**/*.blade.php';
+@source inline("select-none cursor-col-resize pointer-events-none");
 
+/* ページスクロールバー最適化 */
 html.fi {
     scrollbar-gutter: auto !important;
-    overflow: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+/* mega-menu(2.5rem)に合わせてメインコンテンツの高さを調整 */
+.fi-body.fi-body-has-topbar .fi-main-ctn {
+    min-height: calc(100dvh - 2.5rem) !important;
+}
+
+/* ページ全体のわずかなはみ出しによるスクロールバーを防止 */
+.fi-main {
+    height: auto !important;
+    padding-bottom: 0 !important;
+}
+
+.fi-page {
+    padding-bottom: 0 !important;
+}
+
+.fi-page-content {
+    padding-bottom: 0 !important;
 }
 
 @layer components {

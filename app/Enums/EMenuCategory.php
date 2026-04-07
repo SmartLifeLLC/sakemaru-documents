@@ -11,9 +11,18 @@ enum EMenuCategory: string
     public function label(): string
     {
         return match ($this) {
-            self::Documents => '帳票',
+            self::Documents => '帳票管理',
             self::Master => 'マスタ',
-            self::System => 'システム',
+            self::System => '同期運用',
+        };
+    }
+
+    public function icon(): string
+    {
+        return match ($this) {
+            self::Documents => 'heroicon-o-document-text',
+            self::Master => 'heroicon-o-circle-stack',
+            self::System => 'heroicon-o-arrow-path',
         };
     }
 }
