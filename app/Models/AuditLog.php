@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Models\Base\MySqlModel;
 
-class AuditLog extends Model
+class AuditLog extends MySqlModel
 {
-    //
+    protected $guarded = [];
 }

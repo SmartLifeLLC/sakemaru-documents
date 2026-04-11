@@ -1,0 +1,38 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+@import '../common/_layout-base.css';
+@source '../../../../app/Filament/**/*.php';
+@source '../../../../app/Livewire/**/*.php';
+@source '../../../../resources/views/**/*.blade.php';
+
+/* Partner パネルはシンプルに */
+.fi-topbar { height: 2.5rem; }
+
+/* テーブルスクロール固定 */
+.fi-ta {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: calc(100dvh - 12rem);
+}
+.fi-ta-ctn {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+.fi-ta thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: white;
+}
+.fi-ta-footer {
+    flex-shrink: 0;
+    background-color: white;
+    border-top: 1px solid rgb(229 231 235);
+}
+
+@supports not (height: 100dvh) {
+    .fi-ta {
+        height: calc(100vh - 12rem);
+    }
+}

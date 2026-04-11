@@ -13,7 +13,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::connection('sakemaru')->create('audit_logs', function (Blueprint $table) {
+        Schema::connection('mysql')->create('audit_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id')->nullable(); // From default connection (users table), so no FK constraint
             $table->string('event');
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::connection('sakemaru')->dropIfExists('audit_logs');
+        Schema::connection('mysql')->dropIfExists('audit_logs');
     }
 };

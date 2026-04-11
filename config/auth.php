@@ -40,9 +40,9 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-        'admin' => [
+        'partner' => [
             'driver' => 'session',
-            'provider' => 'admins',
+            'provider' => 'partners',
         ],
     ],
 
@@ -66,11 +66,11 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\User::class),
+            'model' => env('AUTH_MODEL', App\Models\Sakemaru\User::class),
         ],
-        'admins' => [
+        'partners' => [
             'driver' => 'eloquent',
-            'model' => App\Models\Admin::class,
+            'model' => App\Models\Partner::class,
         ],
 
         // 'users' => [

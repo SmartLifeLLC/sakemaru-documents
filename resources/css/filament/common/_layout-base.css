@@ -1,0 +1,12 @@
+/* Shared layout overrides (from sakemaru-trade) */
+.fi-main {
+    max-width: 100% !important;
+}
+
+.fi-topbar {
+    padding-inline: 0.5rem;
+}
+
+.fi-body-has-top-navigation .fi-topbar {
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}

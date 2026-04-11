@@ -3,8 +3,7 @@
 namespace App\Filament\Pages\Auth;
 
 use Filament\Auth\Pages\Login;
-use Filament\View\PanelsRenderHook;
-use Illuminate\Contracts\View\View;
+use Filament\Auth\Http\Responses\Contracts\LoginResponse as LoginResponseContract;
 
 class CustomLogin extends Login
 {
@@ -18,7 +17,7 @@ class CustomLogin extends Login
         return 'filament.pages.auth.custom-layout';
     }
 
-    public function authenticate(): ?\Filament\Auth\Http\Responses\Contracts\LoginResponse
+    public function authenticate(): ?LoginResponseContract
     {
         try {
             $this->rateLimit(5);
@@ -47,10 +46,6 @@ class CustomLogin extends Login
 
         session()->regenerate();
 
-        // Dispatch event for video playback instead of immediate redirect
-        $url = session()->pull('url.intended', \Filament\Facades\Filament::getUrl());
-        $this->dispatch('login-success', url: $url);
-
-        return null;
+        return app(LoginResponseContract::class);
     }
 }

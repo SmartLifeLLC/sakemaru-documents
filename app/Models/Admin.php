@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use App\Models\Base\MySqlAuthenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
 
-class Admin extends Authenticatable
+class Admin extends MySqlAuthenticatable
 {
     use HasFactory, Notifiable;
 

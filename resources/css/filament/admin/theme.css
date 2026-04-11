@@ -1,0 +1,165 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+@import '../common/_layout-base.css';
+@source '../../../../app/Filament/**/*.php';
+@source '../../../../app/Livewire/**/*.php';
+@source '../../../../resources/views/**/*.blade.php';
+@source inline("select-none cursor-col-resize pointer-events-none");
+
+/* ページスクロールバー最適化 */
+html.fi {
+    scrollbar-gutter: auto !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+/* mega-menu(2.5rem)に合わせてメインコンテンツの高さを調整 */
+.fi-body.fi-body-has-topbar .fi-main-ctn {
+    min-height: calc(100dvh - 2.5rem) !important;
+}
+
+/* ページ全体のわずかなはみ出しによるスクロールバーを防止 */
+.fi-main {
+    height: auto !important;
+    padding-bottom: 0 !important;
+}
+
+.fi-page {
+    padding-bottom: 0 !important;
+}
+
+.fi-page-content {
+    padding-bottom: 0 !important;
+}
+
+@layer components {
+    .fi-main {
+        @apply max-w-none;
+        overflow: visible !important;
+    }
+
+    .fi-layout {
+        overflow: visible !important;
+    }
+
+    .fi-sidebar + .fi-main {
+        @apply max-w-none;
+    }
+
+    .fi-topbar + .fi-main {
+        @apply max-w-none;
+    }
+
+    .fi-header-heading {
+        @apply text-xl font-semibold;
+    }
+
+    .fi-header {
+        @apply pt-2 my-0;
+    }
+
+    .fi-page-main {
+        @apply py-0 my-0 -mt-1;
+    }
+
+    .fi-page-header-main-ctn {
+        @apply py-0 my-0 mt-1;
+        @apply gap-0;
+    }
+
+    .fi-page-header {
+        @apply py-0 my-0;
+    }
+
+    .fi-ta-row {
+        min-height: 0 !important;
+        height: auto !important;
+    }
+
+    .fi-size-sm {
+        @apply py-0 my-0;
+        height: auto !important;
+        min-height: auto !important;
+        line-height: 1.2 !important;
+    }
+
+    .fi-ta-text-item.fi-size-sm {
+        padding: 0 !important;
+    }
+
+    .fi-section-header-heading {
+        @apply text-base font-medium;
+    }
+
+    .fi-section-header {
+        @apply py-1 mt-1;
+    }
+
+    .fi-ta-header-heading {
+        @apply text-base font-medium;
+    }
+
+    .fi-ta-header {
+        @apply py-0 my-1;
+    }
+
+    .fi-page {
+        @apply pt-1;
+    }
+
+    .fi-ta {
+        @apply mt-0;
+    }
+
+    .fi-section {
+        @apply py-0 my-0;
+    }
+
+    .fi-page-content {
+        @apply py-2;
+    }
+}
+
+/* テーブルコンパクト化 */
+.fi-ta-cell { padding: 1px 2px !important; margin: 0 !important; }
+.fi-ta-text,
+.fi-ta-text-item,
+.fi-ta-text-has-badges {
+    padding: 1px 2px !important;
+    margin: 1px 2px !important;
+}
+
+/* ストライプカラー */
+.fi-ta-table tbody tr:nth-child(odd) { background-color: rgba(59, 130, 246, 0.05) !important; }
+.fi-ta-table tbody tr:nth-child(even) { background-color: white !important; }
+.dark .fi-ta-table tbody tr:nth-child(odd) { background-color: rgba(59, 130, 246, 0.12) !important; }
+.dark .fi-ta-table tbody tr:nth-child(even) { background-color: rgb(17, 24, 39) !important; }
+
+/* スティッキーアクション */
+.sticky-actions .fi-ta-actions-cell,
+.sticky-actions .fi-ta-header-cell:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 10;
+    box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+}
+.sticky-actions .fi-ta-table tbody tr:nth-child(odd) td:last-child { background-color: #f5f9ff !important; }
+.sticky-actions .fi-ta-table tbody tr:nth-child(even) td:last-child { background-color: #ffffff !important; }
+.dark .sticky-actions .fi-ta-table tbody tr:nth-child(odd) td:last-child { background-color: #1e2a3b !important; }
+.dark .sticky-actions .fi-ta-table tbody tr:nth-child(even) td:last-child { background-color: #111827 !important; }
+
+/* トップバー高さ削減 */
+.fi-topbar { height: 2.5rem !important; min-height: 2.5rem !important; }
+.fi-topbar > nav { height: 2.5rem !important; min-height: 2.5rem !important; }
+.fi-topbar .fi-brand,
+.fi-topbar a,
+.fi-topbar span,
+.fi-topbar button {
+    font-size: 0.75rem !important;
+    line-height: 1rem !important;
+}
+
+/* モーダルユーティリティ */
+.modal-split-left { @apply bg-gray-50 dark:bg-gray-800 rounded-lg p-4; }
+.modal-info-card { @apply bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700; }
+.modal-label { @apply text-xs text-gray-500 dark:text-gray-400 mb-1; }
+.modal-value { @apply text-sm font-medium text-gray-900 dark:text-gray-100; }
