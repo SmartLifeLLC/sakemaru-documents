@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Base\SakemaruAuthenticatable;
+use Archilex\AdvancedTables\Concerns\HasViews;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Notifications\Notifiable;
@@ -10,7 +11,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends SakemaruAuthenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasViews;
 
     protected $table = 'users';
 

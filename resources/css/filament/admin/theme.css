@@ -3,6 +3,8 @@
 @source '../../../../app/Filament/**/*.php';
 @source '../../../../app/Livewire/**/*.php';
 @source '../../../../resources/views/**/*.blade.php';
+@source '../../../../vendor/archilex/filament-filter-sets/**/*.php';
+@source '../../../../vendor/archilex/filament-filter-sets/**/*.blade.php';
 @source inline("select-none cursor-col-resize pointer-events-none");
 
 /* ページスクロールバー最適化 */
@@ -31,92 +33,48 @@ html.fi {
     padding-bottom: 0 !important;
 }
 
-@layer components {
-    .fi-main {
-        @apply max-w-none;
-        overflow: visible !important;
-    }
+/* レイアウト幅 */
+.fi-main {
+    max-width: none !important;
+    overflow: visible !important;
+}
 
-    .fi-layout {
-        overflow: visible !important;
-    }
+.fi-layout {
+    overflow: visible !important;
+}
 
-    .fi-sidebar + .fi-main {
-        @apply max-w-none;
-    }
+.fi-sidebar + .fi-main,
+.fi-topbar + .fi-main {
+    max-width: none !important;
+}
 
-    .fi-topbar + .fi-main {
-        @apply max-w-none;
-    }
+/* 行コンパクト化 */
+.fi-ta-row {
+    @apply divide-x divide-gray-200 dark:divide-white/5;
+    min-height: 0 !important;
+    height: auto !important;
+}
 
-    .fi-header-heading {
-        @apply text-xl font-semibold;
-    }
+.fi-size-sm {
+    @apply py-0 my-0;
+    height: auto !important;
+    min-height: auto !important;
+    line-height: 1.2 !important;
+}
 
-    .fi-header {
-        @apply pt-2 my-0;
-    }
+.fi-ta-text-item.fi-size-sm {
+    padding: 0 !important;
+}
 
-    .fi-page-main {
-        @apply py-0 my-0 -mt-1;
-    }
+.fi-section-header-heading {
+    font-size: 1rem !important;
+    font-weight: 500 !important;
+}
 
-    .fi-page-header-main-ctn {
-        @apply py-0 my-0 mt-1;
-        @apply gap-0;
-    }
-
-    .fi-page-header {
-        @apply py-0 my-0;
-    }
-
-    .fi-ta-row {
-        min-height: 0 !important;
-        height: auto !important;
-    }
-
-    .fi-size-sm {
-        @apply py-0 my-0;
-        height: auto !important;
-        min-height: auto !important;
-        line-height: 1.2 !important;
-    }
-
-    .fi-ta-text-item.fi-size-sm {
-        padding: 0 !important;
-    }
-
-    .fi-section-header-heading {
-        @apply text-base font-medium;
-    }
-
-    .fi-section-header {
-        @apply py-1 mt-1;
-    }
-
-    .fi-ta-header-heading {
-        @apply text-base font-medium;
-    }
-
-    .fi-ta-header {
-        @apply py-0 my-1;
-    }
-
-    .fi-page {
-        @apply pt-1;
-    }
-
-    .fi-ta {
-        @apply mt-0;
-    }
-
-    .fi-section {
-        @apply py-0 my-0;
-    }
-
-    .fi-page-content {
-        @apply py-2;
-    }
+.fi-section-header {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0 !important;
+    margin-top: 0.25rem !important;
 }
 
 /* --- ページヘッダー・余白コンパクト化 --- */
@@ -167,14 +125,28 @@ html.fi {
 .fi-page-content {
     padding-top: 0.5rem !important;
     padding-bottom: 0 !important;
+    gap: 0 !important;
 }
 
 .fi-page > .fi-page-content {
     margin-top: 0 !important;
 }
 
-.fi-page-content > .grid {
-    gap: 0.25rem !important;
+/* ページコンテンツグリッドのギャップ（WMSと統一） */
+.fi-page-content > .grid,
+.fi-page-content > .fi-grid {
+    gap: 0 !important;
+}
+
+/* Advanced Tables Github theme: -mb-7 の重なりを緩和 */
+.fi-page-content .flex.-mb-7 {
+    margin-bottom: 0 !important;
+}
+
+/* Advanced Tables Github theme: アクティブタブのアンダーバー修正（Tailwind v4互換） */
+.advanced-tables-fav-bar-item-button::after {
+    content: "" !important;
+    height: 2px !important;
 }
 
 .fi-ta-header-heading {
@@ -189,7 +161,7 @@ html.fi {
 }
 
 /* テーブルコンパクト化 */
-.fi-ta-cell { padding: 5px 2px !important; margin: 0 !important; }
+.fi-ta-cell { padding: 5px 10px !important; margin: 0 !important; }
 
 /* セル内部要素: 上下5px確保（td > a.fi-ta-col > div構造に対応） */
 .fi-ta-cell > div,

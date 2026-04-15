@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "archilex/filament-filter-sets": "^4.0",
         "filament/filament": "^4.0",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
@@ -84,6 +85,12 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        }
+    },
+    "repositories": {
+        "filament-filter-sets": {
+            "type": "composer",
+            "url": "https://filament-filter-sets.composer.sh"
         }
     },
     "minimum-stability": "stable",
