@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use Archilex\AdvancedTables\Plugin\AdvancedTablesPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -50,6 +51,11 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->plugins([
                 StickyTableHeaderPlugin::make(),
+                AdvancedTablesPlugin::make()
+                    ->userViewsEnabled(false)
+                    ->globalUserViewsManageable(false)
+                    ->viewManagerEnabled(false)
+                    ->resourceEnabled(false),
             ])
             ->middleware([
                 EncryptCookies::class,
